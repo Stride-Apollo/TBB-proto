@@ -64,7 +64,7 @@ class OpenmpParallelRegion : public ParallelRegion {
 public:
 	template <typename IndexF, typename IndexL, typename Func>
 	void for_(IndexF first, IndexL last, const Func& f) {
-		ParallelRegion::for_(first, last, f);
+		for_(first, last, typename utils::largest<IndexF, IndexL>::type(1), f);
 	}
 	
 	template <typename IndexF, typename IndexL, typename IndexS, typename Func>
@@ -80,15 +80,12 @@ class TbbParallelRegion : public ParallelRegion {
 public:
 	template <typename IndexF, typename IndexL, typename Func>
 	void for_(IndexF first, IndexL last, const Func& f) {
-		ParallelRegion::for_(first, last, f);
+		for_(first, last, typename utils::largest<IndexF, IndexL>::type(1), f);
 	}
 	
 	template <typename IndexF, typename IndexL, typename IndexS, typename Func>
 	void for_(IndexF first, IndexL last, IndexS step, const Func& f) {
-		tbb::parallel_for<
-			typename utils::largest3<IndexF, IndexL, IndexS>,
-			typename utils::largest3<IndexF, IndexL, IndexS>,
-			typename utils::largest3<IndexF, IndexL, IndexS>>(first, last, step, f);
+		tbb::parallel_for<typename utils::largest3<IndexF, IndexL, IndexS>::type, Func>(first, last, step, f);
 	}
 };
 

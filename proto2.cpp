@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <numeric>
 #include <iterator>
 #include <functional>
 #include <cassert>
@@ -199,11 +200,11 @@ Clock::duration unimp(Clusters families, Clusters schools, Clusters communities)
 template <typename Func>
 Clock::duration measure(const Func& f) {
 	vector<Clock::duration> times;
-	for (int i=0; i<5; i++) {
+	for (int i=0; i<20; i++) {
 		times.push_back(f());
 	}
 	sort(times.begin(), times.end());
-	return (times[0] + times[1] + times[2]) / 3;
+	return accumulate(times.begin(), times.begin()+10, Clock::duration()) / 10;
 }
 
 int main() {
@@ -214,9 +215,9 @@ int main() {
 	funcs["tbb"] = intel_tbb;
 	funcs["um_none"] = unimp<ParallelRegion>;
 	funcs["um_omp"] = unimp<OpenmpParallelRegion>;
-// 	funcs["um_tbb"] = unimp<TbbParallelRegion>;
+ 	funcs["um_tbb"] = unimp<TbbParallelRegion>;
 	
-	vector<size_t> sizes = {1, 2, 4, 8, 16};
+	vector<size_t> sizes = {1, 2, 4, 8, 16, 32};
 	
 	cout << "mulpl";
 	for (auto& it: funcs) {

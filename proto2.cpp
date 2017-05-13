@@ -4,6 +4,7 @@
 #include <mutex>
 #include <vector>
 #include <map>
+#include <type_traits>
 #include <algorithm>
 #include <numeric>
 #include <iterator>
@@ -12,11 +13,14 @@
 #include <chrono>
 using Clock = std::chrono::high_resolution_clock;
 
-#include <omp.h>
+// flags = -ltbb -fopenmp -lomp -O3
 
+#include <omp.h>
 #include <tbb/parallel_for.h>
 
-#include "unipar.h"
+#include "unipar/tbb.h"
+#include "unipar/openmp.h"
+#include "unipar/dummy.h"
 
 using namespace std;
 
@@ -130,29 +134,6 @@ Clock::duration openmp(Clusters families, Clusters schools, Clusters communities
 	return (Clock::now() - start);
 }
 
-Clock::duration openmp2(Clusters families, Clusters schools, Clusters communities) {
-	auto start = Clock::now();
-	
-	for (int step=0; step<5; step++) {
-		#pragma omp parallel for schedule(runtime) num_threads(8)
-		for (size_t i=0; i<families.size(); i++) {
-			Infector::execute(families[i]);
-		}
-			
-		#pragma omp parallel for schedule(runtime) num_threads(8)
-		for (size_t i=0; i<schools.size(); i++) {
-			Infector::execute(schools[i]);
-		}
-			
-		#pragma omp parallel for schedule(runtime) num_threads(8)
-		for (size_t i=0; i<communities.size(); i++) {
-			Infector::execute(communities[i]);
-		}
-	}
-	
-	return (Clock::now() - start);
-}
-
 
 Clock::duration intel_tbb(Clusters families, Clusters schools, Clusters communities) {
 	auto start = Clock::now();
@@ -174,13 +155,11 @@ Clock::duration intel_tbb(Clusters families, Clusters schools, Clusters communit
 	return (Clock::now() - start);
 }
 
-template <typename UniMpType, int nthreads>
-Clock::duration unimp(Clusters families, Clusters schools, Clusters communities) {
+template <typename UniParallel, int nthreads>
+Clock::duration unified(Clusters families, Clusters schools, Clusters communities) {
 	auto start = Clock::now();
 	
-	auto region = ((nthreads == -1) ? UniMpType() : UniMpType(nthreads))
-		.with<;
-	
+	auto region = UniParallel(nthreads);
 	
 	for (int step=0; step<5; step++) {
 		region.for_(0, families.size(), [&](size_t i) {
@@ -199,6 +178,42 @@ Clock::duration unimp(Clusters families, Clusters schools, Clusters communities)
 	return (Clock::now() - start);
 }
 
+
+// Making this a proper class to simulate more 'serious' resources
+class Adder {
+public:
+	Adder(int add): m_add(add) {}
+	int m_add;
+	
+	int do_add(int a, int b) {
+		return a+b+m_add;
+	}
+};
+
+template <typename UniParallel, int nthreads>
+Clock::duration unified_res(Clusters families, Clusters schools, Clusters communities) {
+	auto start = Clock::now();
+	
+	UniParallel par(nthreads);
+	auto region = par.template with<Adder>(2);
+	
+	for (int step=0; step<5; step++) {
+		region.for_(0, families.size(), [&](Adder& add, size_t i) {
+			Infector::execute(families[add.do_add(-2, i)]);
+		});
+		
+		region.for_(0, schools.size(), [&](Adder& add, size_t i) {
+			Infector::execute(schools[add.do_add(-2, i)]);
+		});
+		
+		region.for_(0, communities.size(), [&](Adder& add, size_t i) {
+			Infector::execute(communities[add.do_add(-2, i)]);
+		});
+	}
+	
+	return (Clock::now() - start);
+}
+
 template <typename Func>
 Clock::duration measure(const Func& f, uint total=20, uint best=10) {
 	vector<Clock::duration> times;
@@ -210,17 +225,16 @@ Clock::duration measure(const Func& f, uint total=20, uint best=10) {
 }
 
 int main() {
-	
 	map<string, function<Clock::duration(Clusters, Clusters, Clusters)>> funcs;
-	funcs["none"] = none;
+	funcs["no"] = none;
 	funcs["omp"] = openmp;
-	funcs["omp2"] = openmp2;
 	funcs["tbb"] = intel_tbb;
-	funcs["um_none"] = unimp<ParallelRegion, -1>;
-	funcs["um_omp"] = unimp<OpenmpParallelRegion, -1>;
-	funcs["um_tbb"] = unimp<TbbParallelRegion, -1>;
-	funcs["um_omp3"] = unimp<OpenmpParallelRegion, 3>;
-	funcs["um_tbb3"] = unimp<TbbParallelRegion, 1>;
+	funcs["up_no"] = unified<unipar::DummyParallel, 1>;
+	funcs["up_omp"] = unified<unipar::OpenmpParallel, 8>;
+	funcs["up_tbb"] = unified<unipar::TbbParallel, 8>;
+	funcs["upr_no"] = unified_res<unipar::DummyParallel, 1>;
+	funcs["upr_omp"] = unified_res<unipar::OpenmpParallel, 8>;
+	funcs["upr_tbb"] = unified_res<unipar::TbbParallel, 8>;
 	
 	vector<int> sizes = {1, 2, 4, 8, 16, 32};
 	

@@ -29,54 +29,5 @@ struct largest3 {
 };
 
 
-
-template <typename _Type, typename _Func>
-struct TypeFunc {
-	using Type = _Type;
-	using Func = _Func;
-	Func func;
-	
-	static_assert(std::is_convertible<decltype(func()), Type>::value,
-				  "The function has to return a type castable to the specified type");
-	
-	TypeFunc(const Func& _func): func(_func) {}
-};
-
-
-template <typename... TFs>
-struct ResourceManager;
-
-template <typename TF, typename... Rest>
-struct ResourceManager<TF, Rest...> {
-	TF tf;
-	typename TF::Type value;
-	ResourceManager<Rest...> rest;
-	
-	ResourceManager(TF _tf, Rest&&... rest_tf): tf(_tf), rest(std::forward<Rest>(rest_tf)...) {}
-	
-	ResourceManager(TF _tf, const ResourceManager<Rest...>& _rest): tf(_tf), rest(_rest) {}
-	
-	void create() {
-		value = tf.func();
-		rest.create();
-	}
-	
-	template <typename F, typename... Args>
-	auto call(const F& func, Args&&... args) {
-		return rest.call(func, value, std::forward<Args>(args)...);
-	}
-};
-
-template <>
-struct ResourceManager<> {
-	void create() {}
-	
-	template <typename F, typename... Args>
-	auto call(const F& func, Args&&... args) {
-		return func(args...);
-	}
-};
-
-
 }
 }

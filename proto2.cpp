@@ -232,11 +232,13 @@ int main() {
 	funcs["up_no"] = unified<unipar::DummyParallel, 1>;
 	funcs["up_omp"] = unified<unipar::OpenmpParallel, 8>;
 	funcs["up_tbb"] = unified<unipar::TbbParallel, 8>;
-	funcs["upr_no"] = unified_res<unipar::DummyParallel, 1>;
-	funcs["upr_omp"] = unified_res<unipar::OpenmpParallel, 8>;
-	funcs["upr_tbb"] = unified_res<unipar::TbbParallel, 8>;
+// 	funcs["upr_no"] = unified_res<unipar::DummyParallel, 1>;
+// 	funcs["upr_omp"] = unified_res<unipar::OpenmpParallel, 8>;
+// 	funcs["upr_tbb"] = unified_res<unipar::TbbParallel, 8>;
 	
-	vector<int> sizes = {1, 2, 4, 8, 16, 32};
+	//vector<int> sizes = {1, 2, 4, 8, 16, 32};
+	vector<int> sizes = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+						 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30};
 	
 	cout << "mulpl";
 	for (auto& it: funcs) {

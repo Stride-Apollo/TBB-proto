@@ -32,7 +32,7 @@ public:
 
 	void setFunc(const FuncType& f) {
 		this->m_func = f;
-		this->m_tls.reset(new TLSType(f));
+		this->m_tls.reset(new TLSType(f)); // sadly, I can't directly set the function
 	}
 	
 protected:
